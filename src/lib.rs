@@ -18,7 +18,7 @@ use crate::util::*;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::fs;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use local_channel::mpsc::{channel, Sender, Receiver};
 
 #[no_mangle]
 pub unsafe extern "C" fn deallocate_vec(vec: *mut u8, length: u64) {
@@ -112,27 +112,29 @@ impl FasterKv {
     ///
     /// # Example
     /// ```
+    /// use monoio::{IoUringDriver};
     /// use faster_rs::{FasterKv, status};
     /// let store = FasterKv::default();
+    /// monoio::start::<IoUringDriver, _>(async move {
+    ///   let key = 1;
+    ///   let value = 42;
     ///
-    /// let key = 1;
-    /// let value = 42;
+    ///   // Insert key-value
+    ///   store.upsert(&key, &value, 1);
     ///
-    /// // Insert key-value
-    /// store.upsert(&key, &value, 1);
+    ///   // Read key-value
+    ///   let (res, mut recv) = store.read(&key, 1);
+    ///   assert_eq!(status::OK, res);
+    ///   assert_eq!(value, recv.recv().await.unwrap());
     ///
-    /// // Read key-value
-    /// let (res, recv) = store.read(&key, 1);
-    /// assert_eq!(status::OK, res);
-    /// assert_eq!(value, recv.recv().unwrap());
+    ///   // Delete key-value
+    ///   store.delete(&key, 1);
     ///
-    /// // Delete key-value
-    /// store.delete(&key, 1);
-    ///
-    /// // Re-read key-value and confirm deleted
-    /// let (res, recv) = store.read::<i32, i32>(&key, 1);
-    /// assert_eq!(status::NOT_FOUND, res);
-    /// assert!(recv.recv().is_err());
+    ///   // Re-read key-value and confirm deleted
+    ///   let (res, mut recv) = store.read::<i32, i32>(&key, 1);
+    ///   assert_eq!(status::NOT_FOUND, res);
+    ///   assert!(recv.recv().await.is_none());
+    /// });
     /// ```
     pub fn delete<K>(&self, key: &K, monotonic_serial_number: u64) -> u8
     where

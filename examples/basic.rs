@@ -1,9 +1,10 @@
 extern crate faster_rs;
 
 use faster_rs::{status, FasterKv};
-use std::sync::mpsc::Receiver;
+use local_channel::mpsc::Receiver;
 
-fn main() {
+#[monoio::main]
+async fn main() {
     // Create a Key-Value Store
     let store = FasterKv::default();
     let key0: u64 = 1;
@@ -27,9 +28,9 @@ fn main() {
     // Read
     for i in 0..1000 {
         // Note: need to provide type annotation for the Receiver
-        let (read, recv): (u8, Receiver<u64>) = store.read(&(key0 + i), i);
+        let (read, mut recv): (u8, Receiver<u64>) = store.read(&(key0 + i), i);
         assert!(read == status::OK || read == status::PENDING);
-        let val = recv.recv().unwrap();
+        let val = recv.recv().await.unwrap();
         assert_eq!(val, value0 + i + modification);
         println!("Key: {}, Value: {}", key0 + i, val);
     }

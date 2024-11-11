@@ -3,7 +3,7 @@ extern crate serde_derive;
 
 use faster_rs::{status, FasterKv};
 use serde_derive::{Deserialize, Serialize};
-use std::sync::mpsc::Receiver;
+use local_channel::mpsc::Receiver;
 
 // Note: Debug annotation is just for printing later
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,7 +12,8 @@ struct MyKey {
     bar: String,
 }
 
-fn main() {
+#[monoio::main]
+async fn main() {
     // Create a Key-Value Store
     let store = FasterKv::default();
     let key = MyKey {
@@ -24,13 +25,12 @@ fn main() {
     // Upsert
     let upsert = store.upsert(&key, &value, 1);
     assert!(upsert == status::OK || upsert == status::PENDING);
-
     assert!(store.size() > 0);
 
     // Note: need to provide type annotation for the Receiver
-    let (read, recv): (u8, Receiver<u64>) = store.read(&key, 1);
+    let (read, mut recv): (u8, Receiver<u64>) = store.read(&key, 1);
     assert!(read == status::OK || read == status::PENDING);
-    let val = recv.recv().unwrap();
+    let val = recv.recv().await.unwrap();
     println!("Key: {:?}, Value: {}", key, val);
 
     // Clear used storage

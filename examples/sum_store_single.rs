@@ -2,7 +2,7 @@ extern crate faster_rs;
 
 use faster_rs::*;
 use std::env;
-use std::sync::mpsc::Receiver;
+use local_channel::mpsc::Receiver;
 
 const TABLE_SIZE: u64 = 1 << 15;
 const LOG_SIZE: u64 = 1024 * 1024 * 1024;
@@ -16,7 +16,8 @@ const STORAGE_DIR: &str = "sum_store_single_storage";
 
 // More or less a copy of the single-threaded sum_store populate/recover example from FASTER
 
-fn main() {
+#[monoio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
         let operation = &args[1].to_string();
@@ -26,11 +27,11 @@ fn main() {
                 "{}",
                 "This may take a while, and make sure you have disk space"
             );
-            populate();
+            populate().await;
         } else if operation == "recover" {
             if args.len() > 2 {
                 let token = &args[2];
-                recover(token.to_string());
+                recover(token.to_string()).await;
             } else {
                 println!("Second argument required is token checkpoint to recover");
             }
@@ -41,7 +42,7 @@ fn main() {
     }
 }
 
-fn populate() -> () {
+async fn populate() -> () {
     if let Ok(store) = FasterKvBuilder::new(TABLE_SIZE, LOG_SIZE)
         .with_disk(STORAGE_DIR)
         .set_pre_allocate_log(true)
@@ -53,7 +54,7 @@ fn populate() -> () {
 
         for i in 0..NUM_OPS {
             let idx = i as u64;
-            store.rmw(&(idx % NUM_UNIQUE_KEYS), &(1 as u64), idx);
+            store.rmw(&(idx % NUM_UNIQUE_KEYS), &(1u64), idx);
 
             if (idx % CHECKPOINT_INTERVAL) == 0 {
                 let check = store.checkpoint().unwrap();
@@ -78,7 +79,7 @@ fn populate() -> () {
     }
 }
 
-fn recover(token: String) -> () {
+async fn recover(token: String) -> () {
     println!("Attempting to recover");
     if let Ok(recover_store) = FasterKvBuilder::new(TABLE_SIZE, LOG_SIZE)
         .with_disk(STORAGE_DIR)
@@ -107,9 +108,9 @@ fn recover(token: String) -> () {
                 let mut incorrect = 0;
                 for i in 0..NUM_OPS {
                     let idx = i as u64;
-                    let (status, recv): (u8, Receiver<u64>) =
+                    let (status, mut recv): (u8, Receiver<u64>) =
                         recover_store.read(&(idx % NUM_UNIQUE_KEYS), idx);
-                    if let Ok(val) = recv.recv() {
+                    if let Some(val) = recv.recv().await {
                         let expected = *expected_results
                             .get((idx % NUM_UNIQUE_KEYS) as usize)
                             .unwrap();

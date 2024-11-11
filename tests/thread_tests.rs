@@ -1,12 +1,12 @@
 extern crate faster_rs;
 
 use faster_rs::FasterKv;
-use std::sync::mpsc::Receiver;
+use local_channel::mpsc::Receiver;
 use std::sync::Arc;
 use std::thread;
 
-#[test]
-fn multi_threaded_test() {
+#[monoio::test]
+async fn multi_threaded_test() {
     let store = Arc::new(FasterKv::default());
     let ops = 1 << 15;
 
@@ -44,8 +44,8 @@ fn multi_threaded_test() {
 
     for key in 0..ops {
         let expected_value = initial_value + (modification * num_threads);
-        let (_res, recv): (u8, Receiver<u64>) = store.read(&key, ops + key);
-        assert_eq!(recv.recv().unwrap(), expected_value);
+        let (_res, mut recv): (u8, Receiver<u64>) = store.read(&key, ops + key);
+        assert_eq!(recv.recv().await.unwrap(), expected_value);
     }
     store.complete_pending(true);
     store.stop_session();
