@@ -3,7 +3,7 @@ extern crate faster_rs;
 use faster_rs::*;
 use std::env;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::Receiver;
+use local_channel::mpsc::Receiver;
 use std::sync::Arc;
 
 const TABLE_SIZE: u64 = 1 << 15;
@@ -18,7 +18,8 @@ const STORAGE_DIR: &str = "sum_store_concurrent_storage";
 
 // More or less a copy of the multi-threaded sum_store populate/recover example from FASTER
 
-fn main() {
+#[monoio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() > 2 {
         let operation = &args[1].to_string();
@@ -31,11 +32,11 @@ fn main() {
                 "{}",
                 "This may take a while, and make sure you have disk space"
             );
-            populate(num_threads);
+            populate(num_threads).await;
         } else if operation == "recover" {
             if args.len() > 3 {
                 let token = &args[3];
-                recover(token.to_string(), num_threads);
+                recover(token.to_string(), num_threads).await;
             } else {
                 println!("Second argument required is checkpoint token to recover");
             }
@@ -49,7 +50,7 @@ fn main() {
     }
 }
 
-fn populate(num_threads: usize) -> () {
+async fn populate(num_threads: usize) -> () {
     if let Ok(store) = FasterKvBuilder::new(TABLE_SIZE, LOG_SIZE).with_disk(STORAGE_DIR).build() {
         let store = Arc::new(store);
         let mut threads = vec![];
@@ -103,8 +104,8 @@ fn populate(num_threads: usize) -> () {
 
         let expected_value: u64 = (num_threads as u64) * NUM_OPS / NUM_UNIQUE_KEYS;
         for idx in 0..NUM_UNIQUE_KEYS {
-            match read_results[idx as usize].recv() {
-                Ok(val) => {
+            match read_results[idx as usize].recv().await {
+                Some(val) => {
                     if val != expected_value {
                         println!(
                             "Error for {}, expected {}, actual {}",
@@ -112,7 +113,7 @@ fn populate(num_threads: usize) -> () {
                         );
                     }
                 }
-                Err(_) => {
+                None => {
                     println!("Error reading {}", idx);
                 }
             }
@@ -122,7 +123,7 @@ fn populate(num_threads: usize) -> () {
     }
 }
 
-fn recover(token: String, num_threads: usize) -> () {
+async fn recover(token: String, num_threads: usize) -> () {
     println!("Attempting to recover");
     if let Ok(store) = FasterKvBuilder::new(TABLE_SIZE, LOG_SIZE).with_disk(STORAGE_DIR).build() {
         match store.recover(token.clone(), token.clone()) {
@@ -176,9 +177,9 @@ fn recover(token: String, num_threads: usize) -> () {
                 let mut incorrect = 0;
                 for i in 0..NUM_OPS {
                     let idx = i as u64;
-                    let (status, recv): (u8, Receiver<u64>) =
+                    let (status, mut recv): (u8, Receiver<u64>) =
                         store.read(&(idx % NUM_UNIQUE_KEYS), idx);
-                    if let Ok(val) = recv.recv() {
+                    if let Some(val) = recv.recv().await {
                         let expected = *expected_results
                             .get((idx % NUM_UNIQUE_KEYS) as usize)
                             .unwrap();

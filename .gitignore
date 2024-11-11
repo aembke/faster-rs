@@ -4,3 +4,4 @@ Cargo.lock
 target/
 *.rs.swp
 *.rs.swo
+.idea
