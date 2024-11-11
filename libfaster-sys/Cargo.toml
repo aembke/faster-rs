@@ -5,7 +5,7 @@ version = "0.11.0"
 authors = ["Max Meldrum <mmeldrum@kth.se>", "Matthew Brookes <mbrookes1304@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/faster-rs/faster-rs.git"
-keywords = [ "FASTER", "ffi", "experimental" ]
+keywords = ["FASTER", "ffi", "experimental"]
 build = "build.rs"
 links = "faster"
 license = "MIT"
@@ -14,5 +14,5 @@ license = "MIT"
 libc = "0.2"
 
 [build-dependencies]
-bindgen = "0.50"
+bindgen = "0.70.1"
 cmake = "0.1"
