@@ -14,5 +14,6 @@ license = "MIT"
 libc = "0.2"
 
 [build-dependencies]
-bindgen = "0.70.1"
+# https://github.com/rust-lang/rust-bindgen/issues/2395
+bindgen = "0.60.1"
 cmake = "0.1"

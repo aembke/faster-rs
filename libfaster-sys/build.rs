@@ -1,9 +1,11 @@
 extern crate bindgen;
 
 use cmake::Config;
-use std::env;
-use std::fs;
-use std::path::PathBuf;
+use std::{
+  env,
+  fs,
+  path::{Path, PathBuf},
+};
 
 // Credit to: https://github.com/rust-rocksdb/rust-rocksdb/blob/master/librocksdb-sys/build.rs
 fn fail_on_empty_directory(name: &str) {
@@ -18,10 +20,27 @@ fn fail_on_empty_directory(name: &str) {
 }
 
 fn faster_bindgen() {
+  let faster_path = fs::canonicalize(Path::new("../libfaster-sys/FASTER/cc/src")).unwrap();
+
   let bindings = bindgen::Builder::default()
-        .header("FASTER/cc/src/core/faster-c.h")
-        .blocklist_type("max_align_t") // https://github.com/rust-lang-nursery/rust-bindgen/issues/550
+        .header("FASTER/cc/src/core/faster.h")
+        // sudo apt-get install libc++-dev g++-12
+        // https://microsoft.github.io/FASTER/docs/fasterkv-cpp/
+        .clang_args([
+          "-x".into(), "c++".into(),
+          "-std=c++14".into(),
+          format!("-I{}", faster_path.display()),
+        ])
+        .opaque_type("std::.*")
+        // https://github.com/rust-lang/rust-bindgen/issues/1848
+        .blocklist_type("size_type")
+        .blocklist_type("iterator")
+        .blocklist_type("int_type")
+        .blocklist_type("char_type")
+        .blocklist_type("const_pointer")
+        .blocklist_type("__hashtable")
         .ctypes_prefix("libc")
+        .enable_cxx_namespaces()
         .generate()
         .expect("unable to generate faster bindings");
 
