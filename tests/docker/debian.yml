@@ -1,0 +1,22 @@
+version: '2'
+
+networks:
+  faster-dev:
+    driver: bridge
+
+services:
+  faster_dev:
+    container_name: "faster_dev"
+    build:
+      context: ../..
+      dockerfile: tests/docker/debian.dockerfile
+    networks:
+      - faster-dev
+    command:
+      - "/bin/bash"
+    environment:
+      - 'CMAKE_C_COMPILER=clang-15'
+      - 'CMAKE_CXX_COMPILER=clang++-15'
+    volumes:
+      - "../..:/project"
+      - "~/.cargo/registry:/usr/local/cargo/registry"

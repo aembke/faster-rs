@@ -1,0 +1,6 @@
+deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye main
+deb-src http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye main
+deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-11 main
+deb-src http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-11 main
+deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-15 main
+deb-src http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-15 main
