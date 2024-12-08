@@ -15,6 +15,6 @@ libc = "0.2"
 
 [build-dependencies]
 # https://github.com/rust-lang/rust-bindgen/issues/2395
-# bindgen = "0.60.1"
-bindgen = "0.70"
+bindgen = "0.60.1"
+#bindgen = "0.71"
 cmake = "0.1"
