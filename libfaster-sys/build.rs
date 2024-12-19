@@ -23,7 +23,7 @@ fn faster_bindgen() {
   let faster_path = fs::canonicalize(Path::new("../libfaster-sys/FASTER/cc/src")).unwrap();
 
   let bindings = bindgen::Builder::default()
-        .header("FASTER/cc/src/core/faster.h")
+        .header("faster-c.h")
         // sudo apt-get install libc++-dev g++-12
         // https://microsoft.github.io/FASTER/docs/fasterkv-cpp/
         .clang_args([
@@ -32,17 +32,8 @@ fn faster_bindgen() {
           format!("-I{}", faster_path.display()),
         ])
         .opaque_type("std::.*")
-        .allowlist_recursively(false)
-        .allowlist_type("FasterKv")
-        .allowlist_type("uint64_t")
-        .allowlist_type("Status")
-        .allowlist_type("Guid")
-        .allowlist_type("uint32_t")
-        .allowlist_type("vector")
-        .allowlist_type("string")
-        .allowlist_type("Address")
-        .allowlist_type("GcState")
-        .allowlist_type("GrowState")
+        // https://github.com/rust-lang-nursery/rust-bindgen/issues/550
+        .blocklist_type("max_align_t")
         // https://github.com/rust-lang/rust-bindgen/issues/1848
         .ctypes_prefix("libc")
         .enable_cxx_namespaces()
